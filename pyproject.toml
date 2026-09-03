@@ -8,7 +8,10 @@ version = "0.1.0"
 description = "A top-down racing simulator for evolving Keras neural-network drivers."
 requires-python = ">=3.11"
 dependencies = [
+    "keras>=3,<4",
+    "numpy>=1.26,<2",
     "pygame>=2.6,<3",
+    "tensorflow>=2.16,<3",
 ]
 
 [project.optional-dependencies]
