@@ -1,143 +1,258 @@
 # EvoRacer
 
-EvoRacer is a top-down racing simulator that will train a Keras neural-network driver with a
-genetic algorithm. The current milestone provides the deterministic simulation foundation:
+EvoRacer is a top-down racing simulator in which a genetic algorithm evolves the weights of a
+Keras neural network until it can drive around a closed track. The project uses no labelled
+dataset and no backpropagation: every network learns only through simulated racing, fitness,
+selection, crossover, and mutation.
 
-- closed racetrack geometry;
-- manual car physics;
-- ordered checkpoints and lap counting;
-- collision detection using all four car corners;
-- seven normalized wall-distance sensors;
-- a ten-value observation vector;
-- a Keras neural controller with two bounded outputs for steering and throttle;
-- immutable genome export, validation, cloning, and weight restoration.
+The included visual tools show the population learning in real time and replay the saved champion
+with its sensor rays and neural-network decisions exposed.
 
-## Setup
+## Live genetic training
+
+![EvoRacer live genetic-training dashboard](docs/images/training-dashboard.png)
+
+The training dashboard runs the population together, highlights the current leader, draws driver
+trails, and plots best and mean fitness after every generation.
+
+## Champion replay
+
+![EvoRacer champion replay with sensor rays](docs/images/champion-replay.png)
+
+Replay mode loads the champion's saved Keras weights and displays its seven distance sensors,
+steering and throttle outputs, speed, fitness, checkpoints, laps, and final outcome.
+
+## Features
+
+- Deterministic top-down car physics and collision detection
+- Closed track with 12 ordered checkpoints and lap counting
+- Seven normalized wall-distance sensors
+- Compact Keras neural controller with 406 evolvable parameters
+- Genetic evolution with elitism, tournament selection, crossover, and mutation
+- Smooth checkpoint-based fitness signal and early episode termination
+- Live multi-car training dashboard and fitness chart
+- Automatic champion weight saving
+- Persistent CSV history, JSON summary, and PNG fitness report
+- Standalone champion replay with live neural outputs
+- Reproducible runs through explicit random seeds
+
+## Neural-network architecture
+
+Each controller receives ten normalized observations:
+
+1. Seven wall-distance sensor readings from -90 to +90 degrees
+2. Current speed
+3. Sine of the angle to the next checkpoint
+4. Cosine of the angle to the next checkpoint
+
+The two outputs are steering and throttle, each bounded to `[-1, 1]` by `tanh`.
+
+```mermaid
+flowchart LR
+    S[7 distance sensors] --> O[10-value observation]
+    V[Normalized speed] --> O
+    A[Target angle: sin + cos] --> O
+    O --> H1[Dense 16 - ReLU]
+    H1 --> H2[Dense 12 - ReLU]
+    H2 --> C[Dense 2 - tanh]
+    C --> ST[Steering]
+    C --> TH[Throttle]
+```
+
+Parameter count:
+
+```text
+(10 x 16 + 16) + (16 x 12 + 12) + (12 x 2 + 2) = 406
+```
+
+The Keras weights are the genome. Crossover combines values from two parent genomes and mutation
+adds Gaussian noise to independently selected parameters.
+
+## Fitness function
+
+Progress is continuous rather than checkpoint-only, giving early generations a useful learning
+signal:
+
+```text
+progress = checkpoints_passed + fractional_progress_toward_next_checkpoint
+
+fitness = max(0,
+    1000 * progress
+    - 0.25 * elapsed_seconds
+    - 50 if crashed
+    + 5000 if a lap was completed
+    + 25 * remaining_seconds if a lap was completed
+)
+```
+
+This ordering gives the genetic algorithm clear priorities:
+
+1. Move forward toward the next valid checkpoint.
+2. Cross checkpoints in the correct order.
+3. Complete a full lap.
+4. Complete the lap faster.
+
+An episode ends when the driver completes the target laps, crashes, remains idle for three
+seconds, or reaches the time limit. The evaluator remembers maximum forward progress, preventing
+a driver from losing all useful fitness after moving backward near the end.
+
+## Genetic algorithm defaults
+
+| Setting | Default | Purpose |
+| --- | ---: | --- |
+| Population | 30 | Neural drivers evaluated per generation |
+| Generations | 25 | Evolution cycles in the visual trainer |
+| Elite drivers | 3 | Best genomes copied unchanged with the default population |
+| Tournament size | 3 | Candidates competing during parent selection |
+| Crossover rate | 85% | Probability of combining two parents |
+| Mutation rate | 8% | Probability of mutating each parameter |
+| Mutation deviation | 0.15 | Standard deviation of Gaussian mutation noise |
+| Episode limit | 30 seconds | Maximum simulated time per generation |
+| Seed | 2026 | Makes default experiments reproducible |
+
+```mermaid
+flowchart LR
+    P[Random population] --> E[Race and score]
+    E --> R[Rank by fitness]
+    R --> EL[Copy elites]
+    R --> TS[Tournament selection]
+    TS --> X[Uniform crossover]
+    X --> M[Gaussian mutation]
+    EL --> N[Next generation]
+    M --> N
+    N --> E
+```
+
+## Quick start
+
+Requirements: Python 3.11 or newer. Python 3.12 is recommended.
 
 ```bash
+git clone https://github.com/ShaharMaaravi/Assignment-3---Training-a-Neural-Network.git
+cd Assignment-3---Training-a-Neural-Network
+python3 -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Run the simulation
+Run all commands below from the repository root with `.venv` activated.
+
+## 1. Test the simulator manually
 
 ```bash
 evo-racer
 ```
 
-Controls:
+| Key | Action |
+| --- | --- |
+| Arrow keys or `WASD` | Steer, accelerate, and brake |
+| `V` | Show or hide sensor rays |
+| `R` | Reset after a crash |
+| `Esc` | Quit |
 
-- Arrow keys or `WASD`: steer, accelerate, and brake
-- `V`: show or hide sensor rays
-- `R`: reset after a crash
-- `Esc`: quit
+## 2. Train the neural drivers
 
-## Neural controller
-
-The controller architecture is intentionally compact so a genetic algorithm can evaluate many
-drivers efficiently:
-
-```text
-10 observations -> Dense(16, ReLU) -> Dense(12, ReLU) -> Dense(2, tanh)
+```bash
+evo-racer-train
 ```
 
-The two outputs are steering and throttle values in the range `[-1, 1]`. No gradient optimizer is
-used: the upcoming genetic algorithm will evolve the 406 Keras parameters directly through
-selection, crossover, and mutation.
+| Key | Action |
+| --- | --- |
+| `Space` | Pause or resume |
+| `F` | Cycle between 1x, 4x, and 12x speed |
+| `V` | Show or hide driver trails |
+| `Esc` | Quit; completed-generation results remain saved |
 
-Keras-compatible champion artifacts will be saved as `*.weights.h5` and complete models as
-`*.keras`.
+Example custom experiment:
 
-## Genetic training core
+```bash
+evo-racer-train \
+  --generations 40 \
+  --population 50 \
+  --max-seconds 35 \
+  --seed 2026 \
+  --output artifacts/run-2/champion.weights.h5 \
+  --report-dir artifacts/run-2
+```
 
-Each neural driver runs in a deterministic, headless episode. Its fitness primarily measures
-ordered progress toward checkpoints, including partial progress between gates. Completing a lap
-adds a large bonus, and finishing sooner adds a smaller time bonus. Crashes receive a penalty;
-crashed, stalled, completed, and timed-out drivers stop immediately so training does not waste
-simulation time.
+Giving experiments separate directories prevents a new run from overwriting an existing
+champion. See every available option with:
 
-The evolution engine supports:
+```bash
+evo-racer-train --help
+```
 
-- seeded random populations;
-- elitism, which copies the best drivers unchanged;
-- tournament selection;
-- uniform crossover across both Keras parents' weights;
-- Gaussian mutation of individual parameters;
-- best, mean, median, and worst fitness statistics for every generation;
-- a callback consumed by the live training chart.
+## 3. Replay the champion
 
-## Test
+The default command expects `artifacts/champion.weights.h5`. Train a champion first if that file
+does not exist.
+
+```bash
+evo-racer-replay
+```
+
+| Key | Action |
+| --- | --- |
+| `Space` | Pause or resume |
+| `R` | Restart from the starting line |
+| `V` | Show or hide sensor rays |
+| `Esc` | Quit |
+
+Replay another experiment or request two laps:
+
+```bash
+evo-racer-replay \
+  --weights artifacts/run-2/champion.weights.h5 \
+  --max-seconds 90 \
+  --target-laps 2
+```
+
+## Training outputs
+
+Training updates these files after every completed generation:
+
+| File | Contents |
+| --- | --- |
+| `champion.weights.h5` | Best Keras controller weights discovered so far |
+| `training_history.csv` | Best, mean, median, and worst fitness per generation |
+| `training_summary.json` | Champion result and complete reproducibility configuration |
+| `fitness_progress.png` | Standalone best-versus-mean fitness graph |
+
+The `artifacts/` directory is intentionally ignored by Git because these files belong to local
+training runs.
+
+## Verified result
+
+The locally trained default champion completed all 12 checkpoints and one full lap in 10.77
+simulated seconds, achieving a fitness of 18,281.01. Replay was deterministic when the same saved
+weights and simulation settings were used.
+
+## Tests
 
 ```bash
 pytest
 ruff check .
 ```
 
-## Watch the neural drivers evolve
+The test suite covers geometry, track progress, car physics, neural-controller persistence,
+fitness scoring, crossover, mutation, elitism, training sessions, report generation, and champion
+replay.
 
-Run the visual trainer:
+## Project structure
 
-```bash
-evo-racer-train
+```text
+src/evo_racer/
+├── car.py           # Physics, sensors, checkpoints, and observations
+├── controller.py    # Keras model and genome operations
+├── evolution.py     # Selection, crossover, mutation, and generation statistics
+├── fitness.py       # Episode evaluation and fitness formula
+├── geometry.py      # Segment and projection helpers
+├── replay.py        # Testable champion replay state
+├── replay_app.py    # Champion replay user interface
+├── reporting.py     # CSV, JSON, and PNG report generation
+├── simulation.py    # Manual driving mode and shared rendering
+├── track.py         # Racetrack geometry, checkpoints, and ray casting
+├── training.py      # Live multi-driver training state
+└── training_app.py  # Genetic-training dashboard
 ```
-
-The app races the whole population simultaneously, plots best and mean fitness after each
-generation, highlights the current leader, and automatically saves every improved champion to
-`artifacts/champion.weights.h5`.
-
-After every generation, the `artifacts/` directory also receives presentation-ready evidence:
-
-- `training_history.csv`: complete best/mean/median/worst fitness history;
-- `training_summary.json`: champion result and reproducible training configuration;
-- `fitness_progress.png`: a standalone best-versus-mean fitness graph.
-
-The report files are updated even before training finishes, so safely quitting after a completed
-generation preserves the progress collected so far.
-
-Controls:
-
-- `Space`: pause or resume
-- `F`: cycle between 1x, 4x, and 12x training speed
-- `V`: show or hide driver trails
-- `Esc`: quit (the latest completed champion remains saved)
-
-Training settings can be changed from the command line:
-
-```bash
-evo-racer-train --generations 40 --population 50 --max-seconds 35 --seed 2026
-```
-
-Use `--report-dir another-folder` to place reports somewhere other than the weight directory.
-When keeping an existing champion, give the next experiment its own paths:
-
-```bash
-evo-racer-train --output artifacts/run-2/champion.weights.h5 --report-dir artifacts/run-2
-```
-
-## Replay the champion
-
-After training completes, launch the saved neural driver on its own:
-
-```bash
-evo-racer-replay
-```
-
-Replay mode loads `artifacts/champion.weights.h5`, exposes the network's live steering and
-throttle outputs, renders its seven sensor rays, and reports speed, fitness, checkpoints, laps,
-and the final outcome.
-
-Controls:
-
-- `Space`: pause or resume
-- `R`: restart the champion from the starting line
-- `V`: show or hide sensor rays
-- `Esc`: quit
-
-Use a different weight file or a longer challenge when needed:
-
-```bash
-evo-racer-replay --weights artifacts/champion.weights.h5 --max-seconds 90 --target-laps 2
-```
-
-The trained champion completes the default track. Remaining work is final documentation and demo
-preparation.
