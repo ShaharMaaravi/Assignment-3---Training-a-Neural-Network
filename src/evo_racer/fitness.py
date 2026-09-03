@@ -52,14 +52,13 @@ class EpisodeResult:
     termination_reason: TerminationReason
 
 
-def build_episode_result(
-    car: Car,
+def calculate_fitness(
     maximum_progress: float,
     elapsed_seconds: float,
     termination_reason: TerminationReason,
     config: EpisodeConfig,
-) -> EpisodeResult:
-    """Build a result using the shared fitness formula for headless and visual training."""
+) -> float:
+    """Calculate fitness consistently for training results and champion replays."""
 
     fitness = maximum_progress * config.checkpoint_reward
     fitness -= elapsed_seconds * config.elapsed_second_penalty
@@ -69,9 +68,25 @@ def build_episode_result(
         fitness += remaining * config.remaining_second_bonus
     elif termination_reason == "crashed":
         fitness -= config.crash_penalty
+    return max(0.0, fitness)
+
+
+def build_episode_result(
+    car: Car,
+    maximum_progress: float,
+    elapsed_seconds: float,
+    termination_reason: TerminationReason,
+    config: EpisodeConfig,
+) -> EpisodeResult:
+    """Build a result using the shared fitness formula for headless and visual training."""
 
     return EpisodeResult(
-        fitness=max(0.0, fitness),
+        fitness=calculate_fitness(
+            maximum_progress,
+            elapsed_seconds,
+            termination_reason,
+            config,
+        ),
         maximum_progress=maximum_progress,
         checkpoints_passed=car.checkpoints_passed,
         laps_completed=car.laps_completed,

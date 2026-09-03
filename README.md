@@ -64,7 +64,7 @@ The evolution engine supports:
 - uniform crossover across both Keras parents' weights;
 - Gaussian mutation of individual parameters;
 - best, mean, median, and worst fitness statistics for every generation;
-- a callback that the upcoming live chart can consume.
+- a callback consumed by the live training chart.
 
 ## Test
 
@@ -98,4 +98,30 @@ Training settings can be changed from the command line:
 evo-racer-train --generations 40 --population 50 --max-seconds 35 --seed 2026
 ```
 
-The next milestone will add a champion replay mode and polish the final training experience.
+## Replay the champion
+
+After training completes, launch the saved neural driver on its own:
+
+```bash
+evo-racer-replay
+```
+
+Replay mode loads `artifacts/champion.weights.h5`, exposes the network's live steering and
+throttle outputs, renders its seven sensor rays, and reports speed, fitness, checkpoints, laps,
+and the final outcome.
+
+Controls:
+
+- `Space`: pause or resume
+- `R`: restart the champion from the starting line
+- `V`: show or hide sensor rays
+- `Esc`: quit
+
+Use a different weight file or a longer challenge when needed:
+
+```bash
+evo-racer-replay --weights artifacts/champion.weights.h5 --max-seconds 90 --target-laps 2
+```
+
+The next milestone will tune the learning setup if the champion cannot complete a lap, then add
+final project documentation and demo preparation.
