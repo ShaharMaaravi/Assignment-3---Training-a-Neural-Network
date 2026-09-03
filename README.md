@@ -48,6 +48,24 @@ selection, crossover, and mutation.
 Keras-compatible champion artifacts will be saved as `*.weights.h5` and complete models as
 `*.keras`.
 
+## Genetic training core
+
+Each neural driver runs in a deterministic, headless episode. Its fitness primarily measures
+ordered progress toward checkpoints, including partial progress between gates. Completing a lap
+adds a large bonus, and finishing sooner adds a smaller time bonus. Crashes receive a penalty;
+crashed, stalled, completed, and timed-out drivers stop immediately so training does not waste
+simulation time.
+
+The evolution engine supports:
+
+- seeded random populations;
+- elitism, which copies the best drivers unchanged;
+- tournament selection;
+- uniform crossover across both Keras parents' weights;
+- Gaussian mutation of individual parameters;
+- best, mean, median, and worst fitness statistics for every generation;
+- a callback that the upcoming live chart can consume.
+
 ## Test
 
 ```bash
@@ -55,4 +73,5 @@ pytest
 ruff check .
 ```
 
-The next milestone will add fitness scoring and the genetic evolution loop.
+The next milestone will connect the trainer to a live Pygame visualization, plot fitness by
+generation, and save the champion weights automatically.
