@@ -13,6 +13,7 @@ from .fitness import (
     build_episode_result,
     race_progress,
 )
+from .reporting import TrainingReportPaths, write_training_report
 from .track import Track, default_track
 
 
@@ -40,6 +41,7 @@ class TrainingSession:
         track: Track | None = None,
         episode_config: EpisodeConfig | None = None,
         champion_path: str | Path = "artifacts/champion.weights.h5",
+        report_directory: str | Path | None = None,
     ):
         if generations <= 0:
             raise ValueError("Training must include at least one generation")
@@ -48,6 +50,10 @@ class TrainingSession:
         self.track = track or default_track()
         self.episode_config = episode_config or EpisodeConfig()
         self.champion_path = Path(champion_path)
+        self.report_directory = (
+            Path(report_directory) if report_directory is not None else self.champion_path.parent
+        )
+        self.report_paths: TrainingReportPaths | None = None
         self.generation = 1
         self.elapsed_seconds = 0.0
         self.history: list[GenerationStats] = []
@@ -156,8 +162,23 @@ class TrainingSession:
             self.champion_episode = generation_best.episode
             self.champion.save_weights(self.champion_path)
 
-        if self.generation >= self.total_generations:
+        is_complete = self.generation >= self.total_generations
+        if is_complete:
             self.complete = True
+
+        assert self.champion_episode is not None
+        self.report_paths = write_training_report(
+            self.report_directory,
+            self.history,
+            self.champion_episode,
+            self.engine.config,
+            self.episode_config,
+            total_generations=self.total_generations,
+            complete=is_complete,
+            champion_weights=self.champion_path,
+        )
+
+        if is_complete:
             return
 
         population = self.engine.next_population(scored)

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -31,6 +32,16 @@ def test_live_session_runs_generations_and_saves_the_champion(tmp_path: Path) ->
         champion_path=champion_path,
     )
 
+    session.step()
+
+    assert not session.complete
+    assert len(session.history) == 1
+    assert session.report_paths is not None
+    partial_summary = json.loads(
+        session.report_paths.summary_json.read_text(encoding="utf-8")
+    )
+    assert partial_summary["status"] == "in_progress"
+
     while not session.complete:
         session.step()
 
@@ -42,6 +53,12 @@ def test_live_session_runs_generations_and_saves_the_champion(tmp_path: Path) ->
         max(stats.best_fitness for stats in result.history)
     )
     assert session.active_count == 0
+    assert session.report_paths is not None
+    assert session.report_paths.history_csv.is_file()
+    assert session.report_paths.summary_json.is_file()
+    assert session.report_paths.fitness_chart.is_file()
+    summary = json.loads(session.report_paths.summary_json.read_text(encoding="utf-8"))
+    assert summary["status"] == "complete"
 
 
 def test_training_result_is_unavailable_before_completion(tmp_path: Path) -> None:

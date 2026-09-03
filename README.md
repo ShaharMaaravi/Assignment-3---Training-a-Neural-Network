@@ -85,6 +85,15 @@ The app races the whole population simultaneously, plots best and mean fitness a
 generation, highlights the current leader, and automatically saves every improved champion to
 `artifacts/champion.weights.h5`.
 
+After every generation, the `artifacts/` directory also receives presentation-ready evidence:
+
+- `training_history.csv`: complete best/mean/median/worst fitness history;
+- `training_summary.json`: champion result and reproducible training configuration;
+- `fitness_progress.png`: a standalone best-versus-mean fitness graph.
+
+The report files are updated even before training finishes, so safely quitting after a completed
+generation preserves the progress collected so far.
+
 Controls:
 
 - `Space`: pause or resume
@@ -96,6 +105,13 @@ Training settings can be changed from the command line:
 
 ```bash
 evo-racer-train --generations 40 --population 50 --max-seconds 35 --seed 2026
+```
+
+Use `--report-dir another-folder` to place reports somewhere other than the weight directory.
+When keeping an existing champion, give the next experiment its own paths:
+
+```bash
+evo-racer-train --output artifacts/run-2/champion.weights.h5 --report-dir artifacts/run-2
 ```
 
 ## Replay the champion
@@ -123,5 +139,5 @@ Use a different weight file or a longer challenge when needed:
 evo-racer-replay --weights artifacts/champion.weights.h5 --max-seconds 90 --target-laps 2
 ```
 
-The next milestone will tune the learning setup if the champion cannot complete a lap, then add
-final project documentation and demo preparation.
+The trained champion completes the default track. Remaining work is final documentation and demo
+preparation.

@@ -310,6 +310,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("artifacts/champion.weights.h5"),
     )
+    parser.add_argument(
+        "--report-dir",
+        type=Path,
+        default=None,
+        help="report directory (defaults to the champion weight directory)",
+    )
     parser.add_argument("--exit-on-complete", action="store_true", help=argparse.SUPPRESS)
     return parser
 
@@ -337,6 +343,7 @@ def main() -> None:
         generations=args.generations,
         episode_config=EpisodeConfig(maximum_seconds=args.max_seconds),
         champion_path=args.output,
+        report_directory=args.report_dir,
     )
     TrainingApp(session, exit_on_complete=args.exit_on_complete).run()
 
