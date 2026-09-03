@@ -52,6 +52,35 @@ class EpisodeResult:
     termination_reason: TerminationReason
 
 
+def build_episode_result(
+    car: Car,
+    maximum_progress: float,
+    elapsed_seconds: float,
+    termination_reason: TerminationReason,
+    config: EpisodeConfig,
+) -> EpisodeResult:
+    """Build a result using the shared fitness formula for headless and visual training."""
+
+    fitness = maximum_progress * config.checkpoint_reward
+    fitness -= elapsed_seconds * config.elapsed_second_penalty
+    if termination_reason == "completed":
+        remaining = max(0.0, config.maximum_seconds - elapsed_seconds)
+        fitness += config.completion_bonus
+        fitness += remaining * config.remaining_second_bonus
+    elif termination_reason == "crashed":
+        fitness -= config.crash_penalty
+
+    return EpisodeResult(
+        fitness=max(0.0, fitness),
+        maximum_progress=maximum_progress,
+        checkpoints_passed=car.checkpoints_passed,
+        laps_completed=car.laps_completed,
+        elapsed_seconds=elapsed_seconds,
+        distance_travelled=car.distance_travelled,
+        termination_reason=termination_reason,
+    )
+
+
 def fractional_checkpoint_progress(car: Car, track: Track) -> float:
     """Return progress from the last checkpoint to the next one in the range [0, 1]."""
 
@@ -101,21 +130,10 @@ class EpisodeEvaluator:
                 termination_reason = "stalled"
                 break
 
-        fitness = maximum_progress * self.config.checkpoint_reward
-        fitness -= elapsed_seconds * self.config.elapsed_second_penalty
-        if termination_reason == "completed":
-            remaining = max(0.0, self.config.maximum_seconds - elapsed_seconds)
-            fitness += self.config.completion_bonus
-            fitness += remaining * self.config.remaining_second_bonus
-        elif termination_reason == "crashed":
-            fitness -= self.config.crash_penalty
-
-        return EpisodeResult(
-            fitness=max(0.0, fitness),
-            maximum_progress=maximum_progress,
-            checkpoints_passed=car.checkpoints_passed,
-            laps_completed=car.laps_completed,
-            elapsed_seconds=elapsed_seconds,
-            distance_travelled=car.distance_travelled,
-            termination_reason=termination_reason,
+        return build_episode_result(
+            car,
+            maximum_progress,
+            elapsed_seconds,
+            termination_reason,
+            self.config,
         )

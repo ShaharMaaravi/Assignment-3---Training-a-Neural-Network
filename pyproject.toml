@@ -22,6 +22,7 @@ dev = [
 
 [project.scripts]
 evo-racer = "evo_racer.simulation:main"
+evo-racer-train = "evo_racer.training_app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

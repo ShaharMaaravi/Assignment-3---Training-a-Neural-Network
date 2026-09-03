@@ -5,12 +5,14 @@ from .controller import ControlAction, ControllerConfig, NeuralController
 from .evolution import EvolutionConfig, EvolutionEngine, GenerationStats, TrainingResult
 from .fitness import EpisodeConfig, EpisodeEvaluator, EpisodeResult
 from .track import Track, default_track
+from .training import DriverRun, TrainingSession
 
 __all__ = [
     "Car",
     "CarConfig",
     "ControlAction",
     "ControllerConfig",
+    "DriverRun",
     "EpisodeConfig",
     "EpisodeEvaluator",
     "EpisodeResult",
@@ -20,5 +22,6 @@ __all__ = [
     "NeuralController",
     "Track",
     "TrainingResult",
+    "TrainingSession",
     "default_track",
 ]

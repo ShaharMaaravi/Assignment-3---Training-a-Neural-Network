@@ -25,6 +25,7 @@ dist/
 .ipynb_checkpoints/
 
 # Temporary ML training output
+artifacts/
 checkpoints/
 runs/
 logs/

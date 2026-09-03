@@ -73,5 +73,29 @@ pytest
 ruff check .
 ```
 
-The next milestone will connect the trainer to a live Pygame visualization, plot fitness by
-generation, and save the champion weights automatically.
+## Watch the neural drivers evolve
+
+Run the visual trainer:
+
+```bash
+evo-racer-train
+```
+
+The app races the whole population simultaneously, plots best and mean fitness after each
+generation, highlights the current leader, and automatically saves every improved champion to
+`artifacts/champion.weights.h5`.
+
+Controls:
+
+- `Space`: pause or resume
+- `F`: cycle between 1x, 4x, and 12x training speed
+- `V`: show or hide driver trails
+- `Esc`: quit (the latest completed champion remains saved)
+
+Training settings can be changed from the command line:
+
+```bash
+evo-racer-train --generations 40 --population 50 --max-seconds 35 --seed 2026
+```
+
+The next milestone will add a champion replay mode and polish the final training experience.
