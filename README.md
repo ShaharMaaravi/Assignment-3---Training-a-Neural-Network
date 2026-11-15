@@ -8,6 +8,20 @@ selection, crossover, and mutation.
 The included visual tools show the population learning in real time and replay the saved champion
 with its sensor rays and neural-network decisions exposed.
 
+## Demonstration video
+
+[Watch or download the 35-second EvoRacer demonstration](demo/evoracer-demonstration.mp4).
+
+The video shows a real seeded training run, improving best and mean fitness, the saved model/report
+artifacts, and the full champion replay ending in a completed lap. Recreate it from the repository
+root after training a champion:
+
+```bash
+python scripts/create_demo_video.py
+```
+
+Use `--champion` or `--output` to select different paths.
+
 ## Live genetic training
 
 ![EvoRacer live genetic-training dashboard](docs/images/training-dashboard.png)
@@ -255,4 +269,7 @@ src/evo_racer/
 ├── track.py         # Racetrack geometry, checkpoints, and ray casting
 ├── training.py      # Live multi-driver training state
 └── training_app.py  # Genetic-training dashboard
+
+scripts/
+└── create_demo_video.py  # Reproducible MP4 renderer
 ```
